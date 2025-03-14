@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:synthia/widgets/api_debug_widget.dart';
 import '../models/file_model.dart';
 import '../widgets/file_selector_button.dart';
 import '../widgets/file_info_card.dart';
@@ -124,6 +125,7 @@ class HomeScreenState extends State<HomeScreen> {
                       isLoading: isLoading,
                       onPressed: _summarizeFile,
                     ),
+                    const ApiDebugWidget(),
                   ],
                   if (summary != null) ...[
                     SummaryResultWidget(
