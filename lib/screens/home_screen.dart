@@ -44,7 +44,11 @@ class HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final result = await _summarizationService.summarizeFile(selectedFile!);
+      final locale = Localizations.localeOf(context);
+      final result = await _summarizationService.summarizeFile(
+        selectedFile!,
+        locale!,
+      );
       setState(() {
         summary = result;
         isLoading = false;
@@ -125,7 +129,7 @@ class HomeScreenState extends State<HomeScreen> {
                       isLoading: isLoading,
                       onPressed: _summarizeFile,
                     ),
-                    const ApiDebugWidget(),
+                    // const ApiDebugWidget(),
                   ],
                   if (summary != null) ...[
                     SummaryResultWidget(

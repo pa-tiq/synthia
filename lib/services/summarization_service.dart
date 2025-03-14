@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../models/file_model.dart';
 import 'file_service.dart';
+import 'package:flutter/material.dart'; // Import to use Locale
 
 class SummarizationService {
   final String apiUrl;
@@ -13,7 +14,7 @@ class SummarizationService {
   SummarizationService()
     : apiUrl = dotenv.env['API_URL'] ?? 'http://localhost:8000';
 
-  Future<String> summarizeFile(FileModel fileModel) async {
+  Future<String> summarizeFile(FileModel fileModel, Locale locale) async {
     try {
       // Verify API URL is not empty
       if (apiUrl.isEmpty) {
@@ -77,11 +78,12 @@ class SummarizationService {
       request.fields['file_type'] =
           fileModel.type.toString().split('.').last.toLowerCase();
       request.fields['file_name'] = fileModel.name;
+      request.fields['target_language'] = locale.toString(); // Add language
 
       // Add timeout to the request
       print('Sending request to $apiUrl/summarize');
       var streamedResponse = await request.send().timeout(
-        const Duration(seconds: 60),
+        const Duration(minutes: 5),
         onTimeout: () {
           throw Exception(
             'Request timed out. Please check your network connection or server status.',
@@ -140,7 +142,7 @@ class SummarizationService {
     }
   }
 
-  Future<String> summarizeText(String text) async {
+  Future<String> summarizeText(String text, Locale locale) async {
     try {
       print('Sending text to $apiUrl/summarize/text');
 
@@ -148,7 +150,10 @@ class SummarizationService {
           .post(
             Uri.parse('$apiUrl/summarize/text'),
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: {'text': text},
+            body: {
+              'text': text,
+              'target_language': locale.toString(),
+            }, // Add language
           )
           .timeout(
             const Duration(seconds: 30),
