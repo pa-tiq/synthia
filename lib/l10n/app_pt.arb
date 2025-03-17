@@ -36,5 +36,9 @@
     "imageFileType": "Arquivo de Imagem",
     "textFileType": "Documento de Texto",
     "pdfFileType": "Documento PDF",
-    "unknownFileType": "Tipo de Arquivo Desconhecido"
+    "unknownFileType": "Tipo de Arquivo Desconhecido",
+    "queuedMessage": "Sua solicitação de resumo está na fila.",
+    "processingMessage": "Sua solicitação está sendo processada.",
+    "checkStatusButton": "Verificar status",
+    "failedMessage": "Resumo falhou. Por favor tente novamente."
 }

@@ -51,6 +51,6 @@ build/
 pubspec.lock
 .idea/
 *.iml
-.vscode/
+#.vscode/
 #test/
 .env

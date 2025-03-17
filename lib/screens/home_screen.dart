@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:synthia/widgets/api_debug_widget.dart';
 import '../models/file_model.dart';
+import '../models/job_status_model.dart';
 import '../widgets/file_selector_button.dart';
 import '../widgets/file_info_card.dart';
 import '../widgets/error_wrapper.dart';
@@ -20,7 +20,9 @@ class HomeScreen extends StatefulWidget {
 class HomeScreenState extends State<HomeScreen> {
   FileModel? selectedFile;
   String? summary;
-  bool isLoading = false;
+  JobStatus jobStatus = JobStatus.idle;
+  JobStatusModel? jobStatusModel;
+  String? jobId;
 
   final SummarizationService _summarizationService = SummarizationService();
 
@@ -28,6 +30,8 @@ class HomeScreenState extends State<HomeScreen> {
     setState(() {
       selectedFile = fileModel;
       summary = null;
+      jobStatus = JobStatus.idle;
+      jobId = null;
     });
   }
 
@@ -40,22 +44,45 @@ class HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() {
-      isLoading = true;
+      jobStatus = JobStatus.queued;
+      jobId = null;
     });
 
     try {
       final locale = Localizations.localeOf(context);
-      final result = await _summarizationService.summarizeFile(
-        selectedFile!,
-        locale!,
-      );
+      final JobStatusModel jobStatusResponse = await _summarizationService
+          .summarizeFile(selectedFile!, locale);
+      jobId = jobStatusResponse.jobId; // Extract jobId from JobStatusModel
       setState(() {
-        summary = result;
-        isLoading = false;
+        jobStatus = JobStatus.processing;
       });
+      _checkJobStatus();
     } catch (e) {
       setState(() {
-        isLoading = false;
+        jobStatus = JobStatus.failed;
+      });
+      ErrorWrapper(context).showError(
+        AppLocalizations.of(context)!.failedToSummarize(e.toString()),
+      );
+    }
+  }
+
+  Future<void> _checkJobStatus() async {
+    if (jobId == null) return;
+
+    try {
+      jobStatusModel = await _summarizationService.pollForSummary(jobId!);
+      setState(() {
+        jobStatus = jobStatusModel!.status;
+        summary = jobStatusModel!.summary;
+      });
+      if (jobStatus == JobStatus.processing) {
+        await Future.delayed(const Duration(seconds: 2));
+        _checkJobStatus();
+      }
+    } catch (e) {
+      setState(() {
+        jobStatus = JobStatus.failed;
       });
       ErrorWrapper(context).showError(
         AppLocalizations.of(context)!.failedToSummarize(e.toString()),
@@ -125,21 +152,46 @@ class HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     FileInfoCard(fileModel: selectedFile!),
                     const SizedBox(height: 16),
-                    SummarizationButton(
-                      isLoading: isLoading,
-                      onPressed: _summarizeFile,
-                    ),
-                    // const ApiDebugWidget(),
-                  ],
-                  if (summary != null) ...[
-                    SummaryResultWidget(
-                      summary: summary!,
-                      localizations: localizations,
-                    ),
-                  ],
-                  if (selectedFile == null && summary == null) ...[
-                    const SizedBox(height: 64),
-                    FeatureSection(localizations: localizations),
+                    if (jobStatus == JobStatus.idle)
+                      SummarizationButton(
+                        isLoading: false,
+                        onPressed: _summarizeFile,
+                      ),
+                    if (jobStatus == JobStatus.queued ||
+                        jobStatus == JobStatus.processing) ...[
+                      Text(
+                        jobStatus == JobStatus.queued
+                            ? localizations.queuedMessage
+                            : localizations.processingMessage,
+                      ),
+                      if (jobId != null) Text('Job ID: $jobId'),
+                      ElevatedButton(
+                        onPressed: _checkJobStatus,
+                        child: Text(localizations.checkStatusButton),
+                      ),
+                    ],
+                    if (jobStatus == JobStatus.completed &&
+                        summary != null) ...[
+                      SummaryResultWidget(
+                        summary: summary!,
+                        localizations: localizations,
+                      ),
+                    ],
+                    if (jobStatus == JobStatus.failed) ...[
+                      Text(localizations.failedMessage),
+                      if (jobStatusModel?.error != null)
+                        Text('Error: ${jobStatusModel?.error}'),
+                    ],
+                    if (summary != null) ...[
+                      SummaryResultWidget(
+                        summary: summary!,
+                        localizations: localizations,
+                      ),
+                    ],
+                    if (selectedFile == null && summary == null) ...[
+                      const SizedBox(height: 64),
+                      FeatureSection(localizations: localizations),
+                    ],
                   ],
                 ],
               ),

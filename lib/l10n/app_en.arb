@@ -36,5 +36,9 @@
     "imageFileType": "Image File",
     "textFileType": "Text Document",
     "pdfFileType": "PDF Document",
-    "unknownFileType": "Unknown File Type"
+    "unknownFileType": "Unknown File Type",
+    "queuedMessage": "Your summarization request is queued.",
+    "processingMessage": "Your summarization is being processed.",
+    "checkStatusButton": "Check Status",
+    "failedMessage": "Summarization failed. Please try again."
 }
