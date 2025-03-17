@@ -10,10 +10,10 @@ lib/
 ├── app.dart                  # App configuration and initialization
 ├── config/                   # Configuration files
 │   ├── constants.dart        # App-wide constants
-│   └── theme.dart            # Theme configuration
+│   └── theme.dart            
 ├── l10n/                     # Localization
-│   ├── app_en.arb            # English translations
-│   └── app_pt.arb            # Brazilian Portuguese translations
+│   ├── app_en.arb           
+│   └── app_pt.arb            
 ├── models/
 │   └── file_model.dart       # File data model
 ├── screens/
@@ -24,10 +24,14 @@ lib/
 ├── utils/
 │   └── helpers.dart          # Utility functions
 └── widgets/                  # Reusable UI components
-    ├── error_wrapper.dart    # Error handling widget
-    ├── file_info_card.dart   # File information display
-    ├── file_selector_button.dart  # File selection component
-    └── file_service.dart     # File service widget
+    ├── api_debug_widget.dart       
+    ├── error_wrapper.dart          
+    ├── feature_sectionart        
+    ├── file_info_card.dart        
+    ├── file_selector_button.dart   
+    ├── file_service.dart           
+    ├── summarization_button.dart   
+    └── summary_result_widget.dart 
 ```
 
 ## Prerequisites
@@ -40,18 +44,18 @@ lib/
 
 Check if everything is ok with your flutter environment
 
-```
+```bash
 flutter doctor
 ```
 
 Install dependencies
 
-```
+```bash
 flutter pub get
 ```
 
 Run the app
 
-```
+```bash
 flutter run
 ```

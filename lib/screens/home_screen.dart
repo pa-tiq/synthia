@@ -178,6 +178,10 @@ class HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                     if (jobStatus == JobStatus.failed) ...[
+                      SummarizationButton(
+                        isLoading: false,
+                        onPressed: _summarizeFile,
+                      ),
                       Text(localizations.failedMessage),
                       if (jobStatusModel?.error != null)
                         Text('Error: ${jobStatusModel?.error}'),
