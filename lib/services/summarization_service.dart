@@ -121,7 +121,7 @@ class SummarizationService {
           throw Exception('Server error: Status code ${response.statusCode}');
         }
       }
-    } on SocketException catch (e) {
+    } on SocketException {
       throw Exception(
         'Network error: Unable to connect to the server. Please check your internet connection.',
       );
