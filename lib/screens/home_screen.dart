@@ -150,10 +150,9 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 48),
                   // Only show the file selector when not processing
-                  if (!isProcessing && summary == null)
+                  if (!isProcessing)
                     FileSelectorButton(onFileSelected: _handleFileSelected),
                   if (selectedFile != null) ...[
-                    const SizedBox(height: 24),
                     FileInfoCard(fileModel: selectedFile!),
                     const SizedBox(height: 16),
                     if (jobStatus == JobStatus.idle)
