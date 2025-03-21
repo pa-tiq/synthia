@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:share_plus/share_plus.dart';
 
 class SummaryResultWidget extends StatelessWidget {
   final String summary;
@@ -11,8 +15,24 @@ class SummaryResultWidget extends StatelessWidget {
     required this.localizations,
   });
 
+  // Copy summary to clipboard
+  void _copyToClipboard(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: summary));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(localizations.copiedMessage)));
+  }
+
+  // Share summary (mobile only)
+  void _shareSummary() {
+    Share.share(summary);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Determine if we're on web platform
+    final bool isWeb = kIsWeb;
+
     return Column(
       children: [
         const SizedBox(height: 32),
@@ -40,7 +60,11 @@ class SummaryResultWidget extends StatelessWidget {
           ),
           child: Text(
             summary,
-            style: const TextStyle(fontSize: 16, height: 1.5),
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.5,
+              color: Colors.black, // Changed from default gray to black
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -48,26 +72,19 @@ class SummaryResultWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             OutlinedButton.icon(
-              onPressed: () {
-                // TODO: Implement copy to clipboard
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(localizations.copiedMessage)),
-                );
-              },
+              onPressed: () => _copyToClipboard(context),
               icon: const Icon(Icons.copy),
               label: Text(localizations.copyButton),
             ),
-            const SizedBox(width: 16),
-            OutlinedButton.icon(
-              onPressed: () {
-                // TODO: Implement share functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(localizations.sharingMessage)),
-                );
-              },
-              icon: const Icon(Icons.share),
-              label: Text(localizations.shareButton),
-            ),
+            // Only show share button on mobile platforms
+            if (!isWeb) ...[
+              const SizedBox(width: 16),
+              OutlinedButton.icon(
+                onPressed: _shareSummary,
+                icon: const Icon(Icons.share),
+                label: Text(localizations.shareButton),
+              ),
+            ],
           ],
         ),
       ],

@@ -111,6 +111,8 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
+    final bool isProcessing =
+        jobStatus == JobStatus.queued || jobStatus == JobStatus.processing;
 
     return Scaffold(
       appBar: AppBar(
@@ -147,7 +149,9 @@ class HomeScreenState extends State<HomeScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 48),
-                  FileSelectorButton(onFileSelected: _handleFileSelected),
+                  // Only show the file selector when not processing
+                  if (!isProcessing && summary == null)
+                    FileSelectorButton(onFileSelected: _handleFileSelected),
                   if (selectedFile != null) ...[
                     const SizedBox(height: 24),
                     FileInfoCard(fileModel: selectedFile!),
@@ -157,25 +161,13 @@ class HomeScreenState extends State<HomeScreen> {
                         isLoading: false,
                         onPressed: _summarizeFile,
                       ),
-                    if (jobStatus == JobStatus.queued ||
-                        jobStatus == JobStatus.processing) ...[
+                    if (isProcessing) ...[
                       Text(
                         jobStatus == JobStatus.queued
                             ? localizations.queuedMessage
                             : localizations.processingMessage,
                       ),
                       if (jobId != null) Text('Job ID: $jobId'),
-                      ElevatedButton(
-                        onPressed: _checkJobStatus,
-                        child: Text(localizations.checkStatusButton),
-                      ),
-                    ],
-                    if (jobStatus == JobStatus.completed &&
-                        summary != null) ...[
-                      SummaryResultWidget(
-                        summary: summary!,
-                        localizations: localizations,
-                      ),
                     ],
                     if (jobStatus == JobStatus.failed) ...[
                       SummarizationButton(
@@ -186,16 +178,17 @@ class HomeScreenState extends State<HomeScreen> {
                       if (jobStatusModel?.error != null)
                         Text('Error: ${jobStatusModel?.error}'),
                     ],
-                    if (summary != null) ...[
-                      SummaryResultWidget(
-                        summary: summary!,
-                        localizations: localizations,
-                      ),
-                    ],
-                    if (selectedFile == null && summary == null) ...[
-                      const SizedBox(height: 64),
-                      FeatureSection(localizations: localizations),
-                    ],
+                  ],
+                  // Only show summary result widget once, and only when completed
+                  if (jobStatus == JobStatus.completed && summary != null) ...[
+                    SummaryResultWidget(
+                      summary: summary!,
+                      localizations: localizations,
+                    ),
+                  ],
+                  if (selectedFile == null && summary == null) ...[
+                    const SizedBox(height: 64),
+                    FeatureSection(localizations: localizations),
                   ],
                 ],
               ),
