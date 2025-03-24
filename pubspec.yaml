@@ -48,6 +48,7 @@ dependencies:
   permission_handler: ^10.3.0
   shared_preferences: ^2.1.1
   mime: ^1.0.6
+  just_audio: ^0.9.34
 
 dev_dependencies:
   flutter_test:

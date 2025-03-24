@@ -40,5 +40,6 @@
     "queuedMessage": "Sua solicitação de resumo está na fila.",
     "processingMessage": "Sua solicitação está sendo processada.",
     "checkStatusButton": "Verificar status",
-    "failedMessage": "Resumo falhou. Por favor tente novamente."
+    "failedMessage": "Resumo falhou. Por favor tente novamente.",
+    "audioDurationLabel": "Duração"
 }
