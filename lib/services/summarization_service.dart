@@ -153,7 +153,16 @@ class SummarizationService {
     final response = await http.get(Uri.parse('$apiUrl/result/$jobId'));
 
     if (response.statusCode == 200) {
-      return JobStatusModel.fromJson(json.decode(response.body));
+      try {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final jobStatus = JobStatusModel.fromJson(json.decode(decodedBody));
+
+        print('Summary from poll: ${jobStatus.summary}');
+        return jobStatus;
+      } catch (e) {
+        print('Error decoding response: $e');
+        throw Exception('Failed to decode response: $e');
+      }
     } else {
       throw Exception('Failed to get job status: ${response.statusCode}');
     }

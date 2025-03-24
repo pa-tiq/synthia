@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 
@@ -58,12 +57,15 @@ class SummaryResultWidget extends StatelessWidget {
               ),
             ],
           ),
-          child: Text(
-            summary,
-            style: const TextStyle(
-              fontSize: 16,
-              height: 1.5,
-              color: Colors.black, // Changed from default gray to black
+          child: Text.rich(
+            TextSpan(
+              text: summary,
+              style: const TextStyle(
+                fontSize: 16,
+                height: 1.5,
+                color: Colors.black,
+                fontFamily: 'Roboto',
+              ),
             ),
           ),
         ),
