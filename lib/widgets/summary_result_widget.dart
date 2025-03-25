@@ -34,9 +34,7 @@ class SummaryResultWidget extends StatelessWidget {
 
     return Column(
       children: [
-        const SizedBox(height: 32),
         const Divider(),
-        const SizedBox(height: 16),
         Text(
           localizations.summaryTitle,
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),

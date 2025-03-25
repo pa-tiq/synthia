@@ -175,14 +175,16 @@ class HomeScreenState extends State<HomeScreen> {
 
                   if (selectedFile != null) ...[
                     FileInfoCard(fileModel: selectedFile!),
-                    const SizedBox(height: 16),
-                    if (jobStatus == JobStatus.idle)
+                    if (jobStatus == JobStatus.idle) const SizedBox(height: 16),
+                    if (!isProcessing) ...[
                       SummarizationButton(
                         isLoading: false,
                         onPressed: _summarizeFile,
                       ),
-
+                    ],
                     if (isProcessing) ...[
+                      const SizedBox(height: 16),
+
                       Text(
                         jobStatus == JobStatus.queued
                             ? localizations.queuedMessage
@@ -202,6 +204,8 @@ class HomeScreenState extends State<HomeScreen> {
                   ],
                   // Only show summary result widget once, and only when completed
                   if (jobStatus == JobStatus.completed && summary != null) ...[
+                    const SizedBox(height: 5),
+
                     SummaryResultWidget(
                       summary: summary!,
                       localizations: localizations,
