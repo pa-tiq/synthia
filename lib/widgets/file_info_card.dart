@@ -2,11 +2,52 @@ import 'package:flutter/material.dart';
 import '../models/file_model.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:just_audio/just_audio.dart';
 
-class FileInfoCard extends StatelessWidget {
+class FileInfoCard extends StatefulWidget {
   final FileModel fileModel;
 
   const FileInfoCard({super.key, required this.fileModel});
+
+  @override
+  _FileInfoCardState createState() => _FileInfoCardState();
+}
+
+class _FileInfoCardState extends State<FileInfoCard> {
+  Duration? _audioDuration;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAudioDuration();
+  }
+
+  Future<void> _fetchAudioDuration() async {
+    if (widget.fileModel.type == FileType.audio) {
+      try {
+        final player = AudioPlayer();
+        final duration = await player.setFilePath(widget.fileModel.path);
+        await player.stop();
+        await player.dispose();
+
+        if (mounted) {
+          setState(() {
+            _audioDuration = duration;
+          });
+        }
+      } catch (e) {
+        print('Error fetching audio duration: $e');
+      }
+    }
+  }
+
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return '—';
+
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,13 +69,13 @@ class FileInfoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        fileModel.name,
+                        widget.fileModel.name,
                         style: Theme.of(context).textTheme.titleMedium,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${fileModel.formattedSize} • ${fileModel.extension.toUpperCase()}',
+                        '${widget.fileModel.formattedSize} • ${widget.fileModel.extension.toUpperCase()}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -46,7 +87,7 @@ class FileInfoCard extends StatelessWidget {
             _buildInfoRow(
               context,
               localizations.typeLabel,
-              _getFileTypeString(fileModel.type, localizations),
+              _getFileTypeString(widget.fileModel.type, localizations),
             ),
             _buildInfoRow(
               context,
@@ -54,15 +95,22 @@ class FileInfoCard extends StatelessWidget {
               DateFormat(
                 'MMM dd, yyyy • hh:mm a',
                 localizations.localeName,
-              ).format(fileModel.lastModified ?? DateTime.now()),
+              ).format(widget.fileModel.lastModified ?? DateTime.now()),
             ),
-            _buildInfoRow(
-              context,
-              localizations.locationLabel,
-              fileModel.path,
-              isPath: true,
-            ),
-            if (fileModel.isTooBigForFreeTier)
+            // _buildInfoRow(
+            //   context,
+            //   localizations.locationLabel,
+            //   widget.fileModel.path,
+            //   isPath: true,
+            // ),
+            if (widget.fileModel.type == FileType.audio)
+              _buildInfoRow(
+                context,
+                localizations
+                    .audioDurationLabel, // Add this to your localization
+                _formatDuration(_audioDuration),
+              ),
+            if (widget.fileModel.isTooBigForFreeTier)
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(8),
@@ -96,36 +144,28 @@ class FileInfoCard extends StatelessWidget {
     IconData iconData;
     Color iconColor;
 
-    switch (fileModel.type) {
+    switch (widget.fileModel.type) {
       case FileType.audio:
         iconData = Icons.audio_file;
-        iconColor = Colors.blue;
         break;
       case FileType.image:
         iconData = Icons.image;
-        iconColor = Colors.green;
         break;
       case FileType.text:
         iconData = Icons.description;
-        iconColor = Colors.orange;
         break;
       case FileType.pdf:
         iconData = Icons.picture_as_pdf;
-        iconColor = Colors.red;
         break;
       case FileType.unknown:
         iconData = Icons.insert_drive_file;
-        iconColor = Colors.grey;
         break;
     }
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(iconData, color: iconColor, size: 32),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+      child: Icon(iconData, size: 32),
     );
   }
 

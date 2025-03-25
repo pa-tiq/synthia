@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
 import '../widgets/file_selector_button.dart';
@@ -8,7 +9,9 @@ import '../widgets/error_wrapper.dart';
 import '../services/summarization_service.dart';
 import '../widgets/summarization_button.dart';
 import '../widgets/summary_result_widget.dart';
+import '../widgets/synthia_mascot.dart';
 import '../widgets/feature_section.dart';
+import '../widgets/speech_bubble.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -97,7 +100,10 @@ class HomeScreenState extends State<HomeScreen> {
       builder:
           (context) => AlertDialog(
             title: Text(localizations.aboutTitle),
-            content: Text(localizations.aboutContent),
+            content: Text(
+              localizations.aboutContent,
+              style: const TextStyle(color: Colors.black87),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -133,22 +139,34 @@ class HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 24),
-                  Text(
-                    localizations.mainHeading,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  SpeechBubble(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          localizations.mainHeading,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          localizations.subHeading,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    localizations.subHeading,
-                    style: const TextStyle(fontSize: 16, color: Colors.black54),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 5),
+                  SynthiaMascot(width: 80, height: 80),
+                  const SizedBox(height: 10),
                   // Only show the file selector when not processing
                   if (!isProcessing)
                     FileSelectorButton(onFileSelected: _handleFileSelected),
@@ -186,7 +204,7 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                   if (selectedFile == null && summary == null) ...[
-                    const SizedBox(height: 64),
+                    const SizedBox(height: 20),
                     FeatureSection(localizations: localizations),
                   ],
                 ],
