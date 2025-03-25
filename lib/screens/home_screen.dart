@@ -168,8 +168,11 @@ class HomeScreenState extends State<HomeScreen> {
                   SynthiaMascot(width: 80, height: 80),
                   const SizedBox(height: 10),
                   // Only show the file selector when not processing
-                  if (!isProcessing)
+                  if (!isProcessing) ...[
                     FileSelectorButton(onFileSelected: _handleFileSelected),
+                    const SizedBox(height: 16),
+                  ],
+
                   if (selectedFile != null) ...[
                     FileInfoCard(fileModel: selectedFile!),
                     const SizedBox(height: 16),
@@ -178,13 +181,14 @@ class HomeScreenState extends State<HomeScreen> {
                         isLoading: false,
                         onPressed: _summarizeFile,
                       ),
+
                     if (isProcessing) ...[
                       Text(
                         jobStatus == JobStatus.queued
                             ? localizations.queuedMessage
                             : localizations.processingMessage,
                       ),
-                      if (jobId != null) Text('Job ID: $jobId'),
+                      //if (jobId != null) Text('Job ID: $jobId'),
                     ],
                     if (jobStatus == JobStatus.failed) ...[
                       SummarizationButton(
@@ -204,7 +208,6 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                   if (selectedFile == null && summary == null) ...[
-                    const SizedBox(height: 20),
                     FeatureSection(localizations: localizations),
                   ],
                 ],

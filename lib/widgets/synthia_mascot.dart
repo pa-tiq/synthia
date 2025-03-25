@@ -15,8 +15,8 @@ class SynthiaMascot extends StatelessWidget {
       width: width,
       height: height,
       semanticsLabel: 'Synthia Mascot',
+      colorFilter: ColorFilter.mode(Colors.black87, BlendMode.srcIn),
       placeholderBuilder: (context) => const CircularProgressIndicator(),
-      // This errorBuilder will show an error message if loading fails.
       errorBuilder: (context, error, stackTrace) {
         return const Center(
           child: Text(
