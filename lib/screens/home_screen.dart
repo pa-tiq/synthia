@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
 import '../widgets/file_selector_button.dart';

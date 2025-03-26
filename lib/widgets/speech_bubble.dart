@@ -4,8 +4,11 @@ class SpeechBubble extends StatelessWidget {
   final Widget child;
   final Color color;
 
-  const SpeechBubble({Key? key, required this.child, this.color = Colors.white})
-    : super(key: key);
+  const SpeechBubble({
+    super.key,
+    required this.child,
+    this.color = Colors.white,
+  });
 
   @override
   Widget build(BuildContext context) {

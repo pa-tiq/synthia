@@ -5,8 +5,7 @@ class SynthiaMascot extends StatelessWidget {
   final double width;
   final double height;
 
-  const SynthiaMascot({Key? key, this.width = 200, this.height = 200})
-    : super(key: key);
+  const SynthiaMascot({super.key, this.width = 200, this.height = 200});
 
   @override
   Widget build(BuildContext context) {
