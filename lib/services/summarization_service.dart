@@ -6,11 +6,15 @@ import 'package:http_parser/http_parser.dart';
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
 import 'file_service.dart';
+import 'security_service.dart';
 import 'package:flutter/material.dart';
+import 'encryption_service.dart';
 
 class SummarizationService {
   final String apiUrl;
   final FileService fileService = FileService();
+  final SecurityService securityService = SecurityService();
+  final EncryptionService encryptionService = EncryptionService();
 
   SummarizationService()
     : apiUrl = dotenv.env['API_URL'] ?? 'http://localhost:8000';
@@ -20,8 +24,15 @@ class SummarizationService {
     Locale locale,
   ) async {
     try {
+      // Ensure user is registered
+      var registration = await _ensureRegistration();
+
       // Submit the file and get the job ID
-      String jobId = await _submitFileForSummarization(fileModel, locale);
+      String jobId = await _submitFileForSummarization(
+        fileModel,
+        locale,
+        registration,
+      );
 
       // Poll for the job result
       return await pollForSummary(jobId);
@@ -32,8 +43,15 @@ class SummarizationService {
 
   Future<JobStatusModel> summarizeText(String text, Locale locale) async {
     try {
+      // Ensure user is registered
+      var registration = await _ensureRegistration();
+
       // Submit the text and get the job ID
-      String jobId = await _submitTextForSummarization(text, locale);
+      String jobId = await _submitTextForSummarization(
+        text,
+        locale,
+        registration,
+      );
 
       // Poll for the job result
       return await pollForSummary(jobId);
@@ -42,9 +60,23 @@ class SummarizationService {
     }
   }
 
+  Future<RegistrationModel> _ensureRegistration() async {
+    // Check if we have a valid registration
+    var currentRegistration = await securityService.getCurrentRegistration();
+
+    // If no registration or invalid, register a new user
+    if (currentRegistration == null ||
+        !await securityService.isRegistrationValid()) {
+      currentRegistration = await securityService.registerUser();
+    }
+
+    return currentRegistration;
+  }
+
   Future<String> _submitFileForSummarization(
     FileModel fileModel,
     Locale locale,
+    RegistrationModel registration,
   ) async {
     try {
       // Verify API URL is not empty
@@ -57,6 +89,22 @@ class SummarizationService {
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$apiUrl/summarize'),
+      );
+
+      // Add security parameters
+      request.fields['user_id'] = registration.userId;
+      request.fields['registration_token'] = registration.registrationToken;
+      request.fields['client_public_key'] =
+          encryptionService.clientPublicKeyPEM;
+
+      final payload = json.encode({
+        'file_type': fileModel.type.toString().split('.').last.toLowerCase(),
+        'file_name': fileModel.name,
+        'target_language': locale.toString(),
+      });
+
+      request.fields['encrypted_payload'] = encryptionService.encryptPayload(
+        payload,
       );
 
       // Add file to request based on platform
@@ -92,18 +140,24 @@ class SummarizationService {
         );
       }
 
-      // Add file metadata - using snake_case for API compatibility
-      request.fields['file_type'] =
-          fileModel.type.toString().split('.').last.toLowerCase();
-      request.fields['file_name'] = fileModel.name;
-      request.fields['target_language'] = locale.toString(); // Add language
-
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         var jsonData = json.decode(response.body);
-        return jsonData['job_id'];
+
+        // Handle encrypted response
+        if (jsonData['encrypted_symmetric_key'] != null) {
+          await encryptionService.setSymmetricKey(
+            jsonData['encrypted_symmetric_key'],
+            registration.serverPublicKey,
+          );
+        }
+
+        final decryptedResponse = encryptionService.decryptPayload(
+          jsonData['encrypted_data'],
+        );
+        return json.decode(decryptedResponse)['job_id'];
       } else {
         // Handle error with more specific information
         if (response.body.isNotEmpty) {
@@ -121,24 +175,25 @@ class SummarizationService {
           throw Exception('Server error: Status code ${response.statusCode}');
         }
       }
-    } on SocketException {
-      throw Exception(
-        'Network error: Unable to connect to the server. Please check your internet connection.',
-      );
-    } on HttpException catch (e) {
-      throw Exception('HTTP error: $e');
-    } on FormatException catch (e) {
-      throw Exception('Data format error: $e');
     } catch (e) {
-      throw Exception('Error during file submission: $e');
+      rethrow;
     }
   }
 
-  Future<String> _submitTextForSummarization(String text, Locale locale) async {
+  Future<String> _submitTextForSummarization(
+    String text,
+    Locale locale,
+    RegistrationModel registration,
+  ) async {
     final response = await http.post(
       Uri.parse('$apiUrl/summarize/text'),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'text': text, 'target_language': locale.toString()},
+      body: {
+        'user_id': registration.userId,
+        'registration_token': registration.registrationToken,
+        'text': text,
+        'target_language': locale.toString(),
+      },
     );
 
     if (response.statusCode == 200) {
@@ -149,6 +204,7 @@ class SummarizationService {
     }
   }
 
+  // Existing methods remain the same
   Future<JobStatusModel> pollForSummary(String jobId) async {
     final response = await http.get(Uri.parse('$apiUrl/result/$jobId'));
 
@@ -168,6 +224,19 @@ class SummarizationService {
     }
   }
 
+  // Existing helper method
+  MediaType? _parseContentType(String mimeType) {
+    try {
+      List<String> parts = mimeType.split('/');
+      if (parts.length == 2) {
+        return MediaType(parts[0], parts[1]);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<bool> checkApiHealth() async {
     try {
       final response = await http
@@ -182,18 +251,6 @@ class SummarizationService {
       return response.statusCode == 200;
     } catch (e) {
       return false;
-    }
-  }
-
-  MediaType? _parseContentType(String mimeType) {
-    try {
-      List<String> parts = mimeType.split('/');
-      if (parts.length == 2) {
-        return MediaType(parts[0], parts[1]);
-      }
-      return null;
-    } catch (e) {
-      return null;
     }
   }
 }
