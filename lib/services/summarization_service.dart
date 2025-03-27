@@ -15,15 +15,25 @@ class SummarizationService {
   final FileService fileService = FileService();
   final SecurityService securityService = SecurityService();
   final EncryptionService encryptionService = EncryptionService();
+  bool _isInitialized = false;
 
   SummarizationService()
     : apiUrl = dotenv.env['API_URL'] ?? 'http://localhost:8000';
+
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      await encryptionService.initialize();
+      _isInitialized = true;
+    }
+  }
 
   Future<JobStatusModel> summarizeFile(
     FileModel fileModel,
     Locale locale,
   ) async {
     try {
+      await _ensureInitialized();
+      
       // Ensure user is registered
       var registration = await _ensureRegistration();
 
@@ -43,6 +53,8 @@ class SummarizationService {
 
   Future<JobStatusModel> summarizeText(String text, Locale locale) async {
     try {
+      await _ensureInitialized();
+      
       // Ensure user is registered
       var registration = await _ensureRegistration();
 

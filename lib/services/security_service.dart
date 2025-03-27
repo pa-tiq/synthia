@@ -7,11 +7,19 @@ import 'encryption_service.dart';
 class SecurityService {
   final String apiUrl;
   final EncryptionService encryptionService = EncryptionService();
+  bool _isInitialized = false;
 
   SecurityService() : apiUrl = dotenv.env['API_URL'] ?? 'http://localhost:8000';
 
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      await encryptionService.initialize();
+      _isInitialized = true;
+    }
+  }
+
   Future<RegistrationModel> registerUser() async {
-    await encryptionService.initialize();
+    await _ensureInitialized();
 
     try {
       final response = await http.post(
@@ -75,11 +83,9 @@ class SecurityService {
 
   Future<bool> isRegistrationValid() async {
     final currentReg = await getCurrentRegistration();
-
     if (currentReg == null) return false;
 
     try {
-      // Optional: Implement a validation endpoint in your backend
       final response = await http.post(
         Uri.parse('$apiUrl/security/validate'),
         body: {
@@ -88,8 +94,17 @@ class SecurityService {
         },
       );
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        // Store expiration time if needed
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('token_expires_in', data['expires_in']);
+        return data['valid'] == true;
+      }
+
+      return false;
     } catch (e) {
+      print('Validation error: $e');
       return false;
     }
   }
@@ -103,6 +118,8 @@ class SecurityService {
   }
 
   Future<void> rotateKey(String userId, String registrationToken) async {
+    await _ensureInitialized();
+    
     try {
       final response = await http.post(
         Uri.parse('$apiUrl/security/rotate-key'),

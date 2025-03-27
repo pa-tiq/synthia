@@ -192,10 +192,8 @@ class HomeScreenState extends State<HomeScreen> {
                       //if (jobId != null) Text('Job ID: $jobId'),
                     ],
                     if (jobStatus == JobStatus.failed) ...[
-                      SummarizationButton(
-                        isLoading: false,
-                        onPressed: _summarizeFile,
-                      ),
+                      const SizedBox(height: 16),
+
                       Text(localizations.failedMessage),
                       if (jobStatusModel?.error != null)
                         Text('Error: ${jobStatusModel?.error}'),
