@@ -1,7 +1,13 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
-import 'package:pointycastle/export.dart';
+import 'package:pointycastle/api.dart';
 import 'package:pointycastle/asymmetric/api.dart';
+import 'package:pointycastle/asymmetric/rsa.dart';
+import 'package:pointycastle/key_generators/api.dart';
+import 'package:pointycastle/key_generators/rsa_key_generator.dart';
+import 'package:pointycastle/random/fortuna_random.dart';
+import 'package:asn1lib/asn1lib.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,27 +17,33 @@ class EncryptionService {
 
   Future<void> initialize() async {
     // Generate client key pair
-    _clientKeyPair = _generateRSAKeyPair();
+    _clientKeyPair = await _generateRSAKeyPair();
   }
 
   String get clientPublicKeyPEM {
     return _encodePublicKeyToPem(_clientKeyPair.publicKey);
   }
 
-  AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> _generateRSAKeyPair() {
-    final keyGen =
-        RSAKeyGenerator()..init(
-          ParametersWithRandom(
-            RSAKeyGenerationParameters(BigInt.parse('65537'), 2048, 64),
-            SecureRandom('Fortuna')..seed(
-              KeyParameter(
-                Platform.instance.platformEntropySource().getBytes(32),
-              ),
-            ),
-          ),
-        );
+  Future<AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>>
+  _generateRSAKeyPair() async {
+    final secureRandom = FortunaRandom();
+    final seedSource = Random.secure();
+    final seeds = List<int>.generate(32, (_) => seedSource.nextInt(256));
+    secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
 
-    return keyGen.generateKeyPair();
+    final keyParams = RSAKeyGeneratorParameters(BigInt.from(65537), 2048, 64);
+    final parameterWithRandom = ParametersWithRandom(keyParams, secureRandom);
+
+    final keyGenerator = RSAKeyGenerator();
+    keyGenerator.init(parameterWithRandom);
+
+    final pair = keyGenerator.generateKeyPair();
+
+    // Cast the general key pair to our specific RSA key pair type
+    return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(
+      pair.publicKey as RSAPublicKey,
+      pair.privateKey as RSAPrivateKey,
+    );
   }
 
   Future<void> setSymmetricKey(
@@ -94,9 +106,9 @@ class EncryptionService {
     asn1Sequence.add(ASN1Integer(publicKey.modulus!));
     asn1Sequence.add(ASN1Integer(publicKey.exponent!));
 
-    final bytes = asn1Sequence.encode();
-    final base64 = base64Encode(bytes);
+    final bytes = asn1Sequence.encodedBytes;
+    final base64Data = base64Encode(bytes);
 
-    return '''-----BEGIN PUBLIC KEY-----\n$base64\n-----END PUBLIC KEY-----''';
+    return '''-----BEGIN PUBLIC KEY-----\n$base64Data\n-----END PUBLIC KEY-----''';
   }
 }
