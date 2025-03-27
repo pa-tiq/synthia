@@ -1,6 +1,7 @@
 class AppConstants {
   // File types that the app supports
   static const List<String> supportedFileTypes = [
+    'pdf',
     'txt',
     'doc',
     'docx',

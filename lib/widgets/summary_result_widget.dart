@@ -37,7 +37,11 @@ class SummaryResultWidget extends StatelessWidget {
         const Divider(),
         Text(
           localizations.summaryTitle,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
+          ),
         ),
         const SizedBox(height: 16),
         Container(
