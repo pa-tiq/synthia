@@ -98,6 +98,8 @@ class SummarizationService {
         );
       }
 
+      await encryptionService.initialize();
+
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$apiUrl/summarize'),
@@ -170,10 +172,20 @@ class SummarizationService {
           );
         }
 
+        if (jsonData['encrypted_data'] == null) {
+          throw Exception('No encrypted data received from server');
+        }
+
         final decryptedResponse = encryptionService.decryptPayload(
           jsonData['encrypted_data'],
         );
-        return json.decode(decryptedResponse)['job_id'];
+        final responseData = json.decode(decryptedResponse);
+        
+        if (responseData['job_id'] == null) {
+          throw Exception('No job ID received from server');
+        }
+
+        return responseData['job_id'];
       } else {
         // Handle error with more specific information
         if (response.body.isNotEmpty) {
@@ -192,9 +204,12 @@ class SummarizationService {
         }
       }
     } catch (e) {
-      if (e.toString().contains('EncryptionService not initialized')) {
+      if (e.toString().contains('No symmetric key available')) {
         // Try to initialize and retry once
-        await encryptionService.initialize();
+        await securityService.rotateKey(
+          registration.userId,
+          registration.registrationToken,
+        );
         return _submitFileForSummarization(fileModel, locale, registration);
       }
       rethrow;

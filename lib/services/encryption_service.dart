@@ -81,24 +81,30 @@ class EncryptionService {
 
   String encryptPayload(String payload) {
     if (_currentSymmetricKey == null) {
-      throw Exception('No symmetric key available');
+      throw Exception('No symmetric key available - please ensure initialization');
     }
 
-    final encrypter = encrypt.Encrypter(encrypt.Fernet(_currentSymmetricKey!));
-
-    final encrypted = encrypter.encrypt(payload);
-    return base64.encode(encrypted.bytes);
+    try {
+      final encrypter = encrypt.Encrypter(encrypt.Fernet(_currentSymmetricKey!));
+      final encrypted = encrypter.encrypt(payload);
+      return encrypted.base64;
+    } catch (e) {
+      throw Exception('Failed to encrypt payload: $e');
+    }
   }
 
   String decryptPayload(String encryptedPayload) {
     if (_currentSymmetricKey == null) {
-      throw Exception('No symmetric key available');
+      throw Exception('No symmetric key available - please ensure initialization');
     }
 
-    final encrypter = encrypt.Encrypter(encrypt.Fernet(_currentSymmetricKey!));
-
-    final encrypted = encrypt.Encrypted(base64.decode(encryptedPayload));
-    return encrypter.decrypt(encrypted);
+    try {
+      final encrypter = encrypt.Encrypter(encrypt.Fernet(_currentSymmetricKey!));
+      final encrypted = encrypt.Encrypted.fromBase64(encryptedPayload);
+      return encrypter.decrypt(encrypted);
+    } catch (e) {
+      throw Exception('Failed to decrypt payload: $e');
+    }
   }
 
   Uint8List _decryptWithPrivateKey(

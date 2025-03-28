@@ -132,13 +132,23 @@ class SecurityService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        if (data['encrypted_symmetric_key'] == null) {
+          throw Exception('No encrypted symmetric key received from server');
+        }
+        
+        final currentReg = await getCurrentRegistration();
+        if (currentReg == null) {
+          throw Exception('No valid registration found');
+        }
+
         await encryptionService.setSymmetricKey(
           data['encrypted_symmetric_key'],
-          (await getCurrentRegistration())!.serverPublicKey,
+          currentReg.serverPublicKey,
         );
       } else {
-        throw Exception('Failed to rotate key: ${response.body}');
+        throw Exception('Failed to rotate key: ${response.statusCode}');
       }
+      
     } catch (e) {
       throw Exception('Key rotation error: $e');
     }
