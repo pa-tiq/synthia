@@ -33,7 +33,7 @@ class SummarizationService {
   ) async {
     try {
       await _ensureInitialized();
-      
+
       // Ensure user is registered
       var registration = await _ensureRegistration();
 
@@ -54,7 +54,7 @@ class SummarizationService {
   Future<JobStatusModel> summarizeText(String text, Locale locale) async {
     try {
       await _ensureInitialized();
-      
+
       // Ensure user is registered
       var registration = await _ensureRegistration();
 
@@ -75,10 +75,10 @@ class SummarizationService {
   Future<RegistrationModel> _ensureRegistration() async {
     // Check if we have a valid registration
     var currentRegistration = await securityService.getCurrentRegistration();
+    var isRegistrationValid = await securityService.isRegistrationValid();
 
     // If no registration or invalid, register a new user
-    if (currentRegistration == null ||
-        !await securityService.isRegistrationValid()) {
+    if (currentRegistration == null || !isRegistrationValid) {
       currentRegistration = await securityService.registerUser();
     }
 
@@ -108,6 +108,10 @@ class SummarizationService {
       request.fields['registration_token'] = registration.registrationToken;
       request.fields['client_public_key'] =
           encryptionService.clientPublicKeyPEM;
+      request.fields['file_type'] =
+          fileModel.type.toString().split('.').last.toLowerCase();
+      request.fields['file_name'] = fileModel.name;
+      request.fields['target_language'] = locale.toString();
 
       final payload = json.encode({
         'file_type': fileModel.type.toString().split('.').last.toLowerCase(),
@@ -188,6 +192,11 @@ class SummarizationService {
         }
       }
     } catch (e) {
+      if (e.toString().contains('EncryptionService not initialized')) {
+        // Try to initialize and retry once
+        await encryptionService.initialize();
+        return _submitFileForSummarization(fileModel, locale, registration);
+      }
       rethrow;
     }
   }

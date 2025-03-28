@@ -12,16 +12,23 @@ import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EncryptionService {
-  late AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> _clientKeyPair;
+  AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>? _clientKeyPair;
   encrypt.Key? _currentSymmetricKey;
+  bool _isInitialized = false;
 
   Future<void> initialize() async {
+    if (_isInitialized) return;
+    
     // Generate client key pair
     _clientKeyPair = await _generateRSAKeyPair();
+    _isInitialized = true;
   }
 
-  String get clientPublicKeyPEM {
-    return _encodePublicKeyToPem(_clientKeyPair.publicKey);
+    String get clientPublicKeyPEM {
+    if (_clientKeyPair == null) {
+      throw Exception('EncryptionService not initialized');
+    }
+    return _encodePublicKeyToPem(_clientKeyPair!.publicKey);
   }
 
   Future<AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>>
@@ -50,11 +57,15 @@ class EncryptionService {
     String encryptedKey,
     String serverPublicKeyPEM,
   ) async {
+    if (_clientKeyPair == null) {
+      throw Exception('EncryptionService not initialized');
+    }
+
     try {
       // Decrypt the symmetric key using our private key
       final decryptedKey = _decryptWithPrivateKey(
         base64.decode(encryptedKey),
-        _clientKeyPair.privateKey,
+        _clientKeyPair!.privateKey,
       );
 
       // Store the symmetric key
