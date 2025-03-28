@@ -10,6 +10,7 @@ import 'package:pointycastle/random/fortuna_random.dart';
 import 'package:asn1lib/asn1lib.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class EncryptionService {
   AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>? _clientKeyPair;
@@ -21,12 +22,12 @@ class EncryptionService {
 
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     // Try to load existing key pair
     final prefs = await SharedPreferences.getInstance();
     final savedPrivateKey = prefs.getString(_privateKeyKey);
     final savedPublicKey = prefs.getString(_publicKeyKey);
-    
+
     if (savedPrivateKey != null && savedPublicKey != null) {
       try {
         // Load existing keys
@@ -40,21 +41,22 @@ class EncryptionService {
     }
 
     // Generate new key pair if none exists
-    _clientKeyPair = await compute(_generateKeyPairInIsolate, null);
-    
+    _clientKeyPair = await _generateRSAKeyPair();
     // Save the new key pair
     await _saveKeyPair(_clientKeyPair!);
-    
+
     _isInitialized = true;
   }
 
-    Future<void> _saveKeyPair(AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> keyPair) async {
+  Future<void> _saveKeyPair(
+    AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> keyPair,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Convert keys to PEM format
     final privateKeyPem = _encodePrivateKeyToPem(keyPair.privateKey);
     final publicKeyPem = _encodePublicKeyToPem(keyPair.publicKey);
-    
+
     // Save to shared preferences
     await prefs.setString(_privateKeyKey, privateKeyPem);
     await prefs.setString(_publicKeyKey, publicKeyPem);
@@ -66,57 +68,87 @@ class EncryptionService {
   ) async {
     final privateKey = _decodePrivateKeyFromPem(privateKeyPem);
     final publicKey = _decodePublicKeyFromPem(publicKeyPem);
-    
+
     return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(
       publicKey,
       privateKey,
     );
   }
 
-    // Add these helper methods for PEM encoding/decoding
-  String _encodePrivateKeyToPem(RSAPrivateKey privateKey) {
+  // Add these helper methods for PEM encoding/decoding
+  String _encodePublicKeyToPem(RSAPublicKey publicKey) {
     final asn1Sequence = ASN1Sequence();
-    asn1Sequence.add(ASN1Integer(BigInt.from(0))); // Version
-    asn1Sequence.add(ASN1Integer(privateKey.n!));
-    asn1Sequence.add(ASN1Integer(privateKey.e!));
-    asn1Sequence.add(ASN1Integer(privateKey.d!));
-    asn1Sequence.add(ASN1Integer(privateKey.p!));
-    asn1Sequence.add(ASN1Integer(privateKey.q!));
-    // Add other components as needed
+    asn1Sequence.add(ASN1Integer(publicKey.modulus!));
+    asn1Sequence.add(ASN1Integer(publicKey.exponent!));
 
     final bytes = asn1Sequence.encodedBytes;
     final base64 = base64Encode(bytes);
-    return '''-----BEGIN RSA PRIVATE KEY-----\n$base64\n-----END RSA PRIVATE KEY-----''';
+    return '''-----BEGIN RSA PUBLIC KEY-----\n$base64\n-----END RSA PUBLIC KEY-----''';
+  }
+
+  String _encodePrivateKeyToPem(RSAPrivateKey privateKey) {
+    final asn1Sequence = ASN1Sequence();
+    asn1Sequence.add(ASN1Integer(BigInt.from(0))); // Version
+    asn1Sequence.add(ASN1Integer(privateKey.modulus!));
+    asn1Sequence.add(ASN1Integer(privateKey.publicExponent!));
+    asn1Sequence.add(ASN1Integer(privateKey.privateExponent!));
+    asn1Sequence.add(ASN1Integer(privateKey.p!));
+    asn1Sequence.add(ASN1Integer(privateKey.q!));
+    asn1Sequence.add(
+      ASN1Integer(privateKey.privateExponent! % (privateKey.p! - BigInt.one)),
+    ); // dmp1
+    asn1Sequence.add(
+      ASN1Integer(privateKey.privateExponent! % (privateKey.q! - BigInt.one)),
+    ); // dmq1
+    asn1Sequence.add(
+      ASN1Integer(privateKey.q!.modInverse(privateKey.p!)),
+    ); // iqmp
+
+    final bytes = asn1Sequence.encodedBytes;
+    final base64 = base64Encode(bytes);
+    return '''-----BEGIN RSA PRIVATE KEY-----\n${_formatBase64String(base64)}\n-----END RSA PRIVATE KEY-----''';
   }
 
   RSAPrivateKey _decodePrivateKeyFromPem(String pem) {
     // Remove headers and decode base64
     final lines = pem.split('\n');
-    final keyB64 = lines
-        .where((line) => !line.contains('--'))
-        .join('');
+    final keyB64 = lines.where((line) => !line.contains('--')).join('');
     final keyBytes = base64Decode(keyB64);
 
     // Parse ASN.1 sequence
     final asn1Parser = ASN1Parser(keyBytes);
     final topSequence = asn1Parser.nextObject() as ASN1Sequence;
-    
+
     // Extract components
     final version = (topSequence.elements![0] as ASN1Integer).valueAsBigInteger;
     final modulus = (topSequence.elements![1] as ASN1Integer).valueAsBigInteger;
-    final publicExponent = (topSequence.elements![2] as ASN1Integer).valueAsBigInteger;
-    final privateExponent = (topSequence.elements![3] as ASN1Integer).valueAsBigInteger;
+    final publicExponent =
+        (topSequence.elements![2] as ASN1Integer).valueAsBigInteger;
+    final privateExponent =
+        (topSequence.elements![3] as ASN1Integer).valueAsBigInteger;
     final p = (topSequence.elements![4] as ASN1Integer).valueAsBigInteger;
     final q = (topSequence.elements![5] as ASN1Integer).valueAsBigInteger;
 
-    return RSAPrivateKey(
-      modulus!,
-      privateExponent!,
-      p,
-      q,
-    );
+    return RSAPrivateKey(modulus!, privateExponent!, p, q);
   }
 
+  RSAPublicKey _decodePublicKeyFromPem(String pem) {
+    // Remove headers and decode base64
+    final lines = pem.split('\n');
+    final keyB64 = lines.where((line) => !line.contains('--')).join('');
+    final keyBytes = base64Decode(keyB64);
+
+    // Parse ASN.1 sequence
+    final asn1Parser = ASN1Parser(keyBytes);
+    final topSequence = asn1Parser.nextObject() as ASN1Sequence;
+
+    // Extract components
+    final modulus = (topSequence.elements![0] as ASN1Integer).valueAsBigInteger;
+    final exponent =
+        (topSequence.elements![1] as ASN1Integer).valueAsBigInteger;
+
+    return RSAPublicKey(modulus!, exponent!);
+  }
 
   String get clientPublicKeyPEM {
     if (_clientKeyPair == null) {
@@ -125,8 +157,7 @@ class EncryptionService {
     return _encodePublicKeyToPem(_clientKeyPair!.publicKey);
   }
 
-  Future<AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>>
-  _generateRSAKeyPair() async {
+  AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> _generateRSAKeyPair() {
     final secureRandom = FortunaRandom();
     final seedSource = Random.secure();
     final seeds = List<int>.generate(32, (_) => seedSource.nextInt(256));
@@ -218,18 +249,6 @@ class EncryptionService {
           ..init(false, PrivateKeyParameter<RSAPrivateKey>(privateKey));
 
     return cipher.process(encrypted);
-  }
-
-  String _encodePublicKeyToPem(RSAPublicKey publicKey) {
-    final asn1PublicKey =
-        ASN1Sequence()
-          ..add(ASN1Integer(publicKey.modulus!))
-          ..add(ASN1Integer(publicKey.exponent!));
-
-    final bytes = asn1PublicKey.encodedBytes;
-    final base64Key = base64.encode(bytes);
-
-    return '''-----BEGIN RSA PUBLIC KEY-----\n${_formatBase64String(base64Key)}\n-----END RSA PUBLIC KEY-----''';
   }
 
   String _formatBase64String(String str) {
