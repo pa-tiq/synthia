@@ -7,34 +7,66 @@ import 'dart:io' show Platform;
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
 import 'file_service.dart';
-import 'auth_service.dart'; // Import the new auth service
+import 'auth_service.dart';
 import 'package:flutter/material.dart';
 
 class SummarizationService {
   final String apiUrl;
   final FileService fileService = FileService();
-  final AuthService authService = AuthService(); // Use the auth service
+  final AuthService authService = AuthService();
 
   SummarizationService()
     : apiUrl = dotenv.env['API_URL'] ?? 'http://localhost:8000';
+
+  // Helper method to execute API calls with token refresh capability
+  Future<T> _executeWithTokenRefresh<T>({
+    required Future<T> Function(Map<String, String> headers) apiCall,
+  }) async {
+    try {
+      // Get current auth headers
+      final authHeaders = await authService.getAuthHeader();
+
+      // Try the API call
+      return await apiCall(authHeaders);
+    } catch (e) {
+      // If we get a 401 error, try to force refresh the token and retry once
+      if (e.toString().contains('Server error 401') ||
+          e.toString().contains('Unauthorized') ||
+          e.toString().contains('Invalid token')) {
+        // Force token refresh by clearing the stored token
+        final secureStorage = authService.secureStorage;
+        await secureStorage.delete(key: AuthService.tokenKey);
+
+        // Get fresh auth headers
+        final newAuthHeaders = await authService.getAuthHeader();
+
+        // Retry the API call with the new token
+        return await apiCall(newAuthHeaders);
+      }
+
+      // For other errors, just rethrow
+      rethrow;
+    }
+  }
 
   Future<JobStatusModel> summarizeFile(
     FileModel fileModel,
     Locale locale,
   ) async {
     try {
-      // Get the auth headers
-      final authHeaders = await authService.getAuthHeader();
+      return await _executeWithTokenRefresh<JobStatusModel>(
+        apiCall: (authHeaders) async {
+          // Submit the file and get the job ID
+          String jobId = await _submitFileForSummarization(
+            fileModel,
+            locale,
+            authHeaders,
+          );
 
-      // Submit the file and get the job ID
-      String jobId = await _submitFileForSummarization(
-        fileModel,
-        locale,
-        authHeaders,
+          // Poll for the job result
+          return await pollForSummary(jobId, authHeaders);
+        },
       );
-
-      // Poll for the job result
-      return await pollForSummary(jobId, authHeaders);
     } catch (e) {
       throw Exception('Error during summarization: $e');
     }
@@ -42,18 +74,19 @@ class SummarizationService {
 
   Future<JobStatusModel> summarizeText(String text, Locale locale) async {
     try {
-      // Get the auth headers
-      final authHeaders = await authService.getAuthHeader();
+      return await _executeWithTokenRefresh<JobStatusModel>(
+        apiCall: (authHeaders) async {
+          // Submit the text and get the job ID
+          String jobId = await _submitTextForSummarization(
+            text,
+            locale,
+            authHeaders,
+          );
 
-      // Submit the text and get the job ID
-      String jobId = await _submitTextForSummarization(
-        text,
-        locale,
-        authHeaders,
+          // Poll for the job result
+          return await pollForSummary(jobId, authHeaders);
+        },
       );
-
-      // Poll for the job result
-      return await pollForSummary(jobId, authHeaders);
     } catch (e) {
       throw Exception('Error during text summarization: $e');
     }
@@ -181,23 +214,27 @@ class SummarizationService {
     String jobId,
     Map<String, String> authHeaders,
   ) async {
-    final response = await http.get(
-      Uri.parse('$apiUrl/result/$jobId'),
-      headers: authHeaders,
-    );
+    return await _executeWithTokenRefresh<JobStatusModel>(
+      apiCall: (headers) async {
+        final response = await http.get(
+          Uri.parse('$apiUrl/result/$jobId'),
+          headers: headers,
+        );
 
-    if (response.statusCode == 200) {
-      try {
-        final decodedBody = utf8.decode(response.bodyBytes);
-        final jobStatus = JobStatusModel.fromJson(json.decode(decodedBody));
-        return jobStatus;
-      } catch (e) {
-        print('Error decoding response: $e');
-        throw Exception('Failed to decode response: $e');
-      }
-    } else {
-      throw Exception('Failed to get job status: ${response.statusCode}');
-    }
+        if (response.statusCode == 200) {
+          try {
+            final decodedBody = utf8.decode(response.bodyBytes);
+            final jobStatus = JobStatusModel.fromJson(json.decode(decodedBody));
+            return jobStatus;
+          } catch (e) {
+            print('Error decoding response: $e');
+            throw Exception('Failed to decode response: $e');
+          }
+        } else {
+          throw Exception('Failed to get job status: ${response.statusCode}');
+        }
+      },
+    );
   }
 
   Future<bool> checkApiHealth() async {

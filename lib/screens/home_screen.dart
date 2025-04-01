@@ -86,7 +86,7 @@ class HomeScreenState extends State<HomeScreen> {
         summary = jobStatusModel!.summary;
       });
       if (jobStatus == JobStatus.processing) {
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 4));
         _checkJobStatus();
       }
     } catch (e) {
