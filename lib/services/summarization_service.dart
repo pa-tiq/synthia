@@ -3,14 +3,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'dart:io' show Platform;
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
 import 'file_service.dart';
+import 'auth_service.dart'; // Import the new auth service
 import 'package:flutter/material.dart';
 
 class SummarizationService {
   final String apiUrl;
   final FileService fileService = FileService();
+  final AuthService authService = AuthService(); // Use the auth service
 
   SummarizationService()
     : apiUrl = dotenv.env['API_URL'] ?? 'http://localhost:8000';
@@ -20,11 +23,18 @@ class SummarizationService {
     Locale locale,
   ) async {
     try {
+      // Get the auth headers
+      final authHeaders = await authService.getAuthHeader();
+
       // Submit the file and get the job ID
-      String jobId = await _submitFileForSummarization(fileModel, locale);
+      String jobId = await _submitFileForSummarization(
+        fileModel,
+        locale,
+        authHeaders,
+      );
 
       // Poll for the job result
-      return await pollForSummary(jobId);
+      return await pollForSummary(jobId, authHeaders);
     } catch (e) {
       throw Exception('Error during summarization: $e');
     }
@@ -32,11 +42,18 @@ class SummarizationService {
 
   Future<JobStatusModel> summarizeText(String text, Locale locale) async {
     try {
+      // Get the auth headers
+      final authHeaders = await authService.getAuthHeader();
+
       // Submit the text and get the job ID
-      String jobId = await _submitTextForSummarization(text, locale);
+      String jobId = await _submitTextForSummarization(
+        text,
+        locale,
+        authHeaders,
+      );
 
       // Poll for the job result
-      return await pollForSummary(jobId);
+      return await pollForSummary(jobId, authHeaders);
     } catch (e) {
       throw Exception('Error during text summarization: $e');
     }
@@ -45,6 +62,7 @@ class SummarizationService {
   Future<String> _submitFileForSummarization(
     FileModel fileModel,
     Locale locale,
+    Map<String, String> authHeaders,
   ) async {
     try {
       // Verify API URL is not empty
@@ -58,6 +76,9 @@ class SummarizationService {
         'POST',
         Uri.parse('$apiUrl/summarize'),
       );
+
+      // Add auth headers
+      request.headers.addAll(authHeaders);
 
       // Add file to request based on platform
       if (fileModel.bytes != null) {
@@ -134,10 +155,17 @@ class SummarizationService {
     }
   }
 
-  Future<String> _submitTextForSummarization(String text, Locale locale) async {
+  Future<String> _submitTextForSummarization(
+    String text,
+    Locale locale,
+    Map<String, String> authHeaders,
+  ) async {
     final response = await http.post(
       Uri.parse('$apiUrl/summarize/text'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...authHeaders, // Spread the auth headers
+      },
       body: {'text': text, 'target_language': locale.toString()},
     );
 
@@ -149,15 +177,19 @@ class SummarizationService {
     }
   }
 
-  Future<JobStatusModel> pollForSummary(String jobId) async {
-    final response = await http.get(Uri.parse('$apiUrl/result/$jobId'));
+  Future<JobStatusModel> pollForSummary(
+    String jobId,
+    Map<String, String> authHeaders,
+  ) async {
+    final response = await http.get(
+      Uri.parse('$apiUrl/result/$jobId'),
+      headers: authHeaders,
+    );
 
     if (response.statusCode == 200) {
       try {
         final decodedBody = utf8.decode(response.bodyBytes);
         final jobStatus = JobStatusModel.fromJson(json.decode(decodedBody));
-
-        print('Summary from poll: ${jobStatus.summary}');
         return jobStatus;
       } catch (e) {
         print('Error decoding response: $e');

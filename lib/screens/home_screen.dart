@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:synthia/services/auth_service.dart';
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
 import '../widgets/file_selector_button.dart';
@@ -27,6 +28,8 @@ class HomeScreenState extends State<HomeScreen> {
   String? jobId;
 
   final SummarizationService _summarizationService = SummarizationService();
+  final AuthService _authService =
+      AuthService(); // Define or initialize authService
 
   void _handleFileSelected(FileModel fileModel) {
     setState(() {
@@ -73,7 +76,11 @@ class HomeScreenState extends State<HomeScreen> {
     if (jobId == null) return;
 
     try {
-      jobStatusModel = await _summarizationService.pollForSummary(jobId!);
+      final authHeaders = await _authService.getAuthHeader();
+      jobStatusModel = await _summarizationService.pollForSummary(
+        jobId!,
+        authHeaders,
+      );
       setState(() {
         jobStatus = jobStatusModel!.status;
         summary = jobStatusModel!.summary;
@@ -192,10 +199,7 @@ class HomeScreenState extends State<HomeScreen> {
                       //if (jobId != null) Text('Job ID: $jobId'),
                     ],
                     if (jobStatus == JobStatus.failed) ...[
-                      SummarizationButton(
-                        isLoading: false,
-                        onPressed: _summarizeFile,
-                      ),
+                      const SizedBox(height: 16),
                       Text(localizations.failedMessage),
                       if (jobStatusModel?.error != null)
                         Text('Error: ${jobStatusModel?.error}'),
