@@ -41,5 +41,7 @@
     "processingMessage": "Sua solicitação está sendo processada.",
     "checkStatusButton": "Verificar status",
     "failedMessage": "Resumo falhou. Por favor tente novamente.",
-    "audioDurationLabel": "Duração"
+    "audioDurationLabel": "Duração",
+    "selectTargetLanguage": "O seu arquivo está em qual idioma?",
+    "languageSelectionHint": "Escolha o idioma no qual o arquivo foi escrito"
 }

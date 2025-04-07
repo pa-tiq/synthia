@@ -48,12 +48,13 @@ dependencies:
   permission_handler: ^10.3.0
   shared_preferences: ^2.1.1
   mime: ^1.0.6
-  just_audio: ^0.9.34
+  just_audio: ^0.9.46
   google_fonts: ^6.2.0
   flutter_svg: ^2.0.16
   flutter_secure_storage: ^8.0.0
   uuid: ^4.5.1
   jwt_decoder: ^2.0.1
+  flag: ^7.0.0
 
 dev_dependencies:
   flutter_test:

@@ -3,12 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'dart:io' show Platform;
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
 import 'file_service.dart';
 import 'auth_service.dart';
-import 'package:flutter/material.dart';
 
 class SummarizationService {
   final String apiUrl;
@@ -51,7 +49,7 @@ class SummarizationService {
 
   Future<JobStatusModel> summarizeFile(
     FileModel fileModel,
-    Locale locale,
+    String targetLanguage,
   ) async {
     try {
       return await _executeWithTokenRefresh<JobStatusModel>(
@@ -59,7 +57,7 @@ class SummarizationService {
           // Submit the file and get the job ID
           String jobId = await _submitFileForSummarization(
             fileModel,
-            locale,
+            targetLanguage,
             authHeaders,
           );
 
@@ -72,14 +70,17 @@ class SummarizationService {
     }
   }
 
-  Future<JobStatusModel> summarizeText(String text, Locale locale) async {
+  Future<JobStatusModel> summarizeText(
+    String text,
+    String targetLanguage,
+  ) async {
     try {
       return await _executeWithTokenRefresh<JobStatusModel>(
         apiCall: (authHeaders) async {
           // Submit the text and get the job ID
           String jobId = await _submitTextForSummarization(
             text,
-            locale,
+            targetLanguage,
             authHeaders,
           );
 
@@ -94,7 +95,7 @@ class SummarizationService {
 
   Future<String> _submitFileForSummarization(
     FileModel fileModel,
-    Locale locale,
+    String targetLanguage,
     Map<String, String> authHeaders,
   ) async {
     try {
@@ -150,7 +151,8 @@ class SummarizationService {
       request.fields['file_type'] =
           fileModel.type.toString().split('.').last.toLowerCase();
       request.fields['file_name'] = fileModel.name;
-      request.fields['target_language'] = locale.toString(); // Add language
+      request.fields['target_language'] =
+          targetLanguage; // Use the provided language code
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -190,7 +192,7 @@ class SummarizationService {
 
   Future<String> _submitTextForSummarization(
     String text,
-    Locale locale,
+    String targetLanguage,
     Map<String, String> authHeaders,
   ) async {
     final response = await http.post(
@@ -199,7 +201,7 @@ class SummarizationService {
         'Content-Type': 'application/x-www-form-urlencoded',
         ...authHeaders, // Spread the auth headers
       },
-      body: {'text': text, 'target_language': locale.toString()},
+      body: {'text': text, 'target_language': targetLanguage},
     );
 
     if (response.statusCode == 200) {

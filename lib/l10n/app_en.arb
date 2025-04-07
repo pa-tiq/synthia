@@ -41,5 +41,7 @@
     "processingMessage": "Your summarization is being processed.",
     "checkStatusButton": "Check Status",
     "failedMessage": "Summarization failed. Please try again.",
-    "audioDurationLabel": "Duration"
+    "audioDurationLabel": "Duration",
+    "selectTargetLanguage": "What language is your file in?",
+    "languageSelectionHint": "Choose the language in which the file was written"
 }

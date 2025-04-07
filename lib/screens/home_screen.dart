@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:synthia/services/auth_service.dart';
 import '../models/file_model.dart';
 import '../models/job_status_model.dart';
+import '../models/language_model.dart';
 import '../widgets/file_selector_button.dart';
 import '../widgets/file_info_card.dart';
 import '../widgets/error_wrapper.dart';
@@ -12,6 +13,7 @@ import '../widgets/summary_result_widget.dart';
 import '../widgets/synthia_mascot.dart';
 import '../widgets/feature_section.dart';
 import '../widgets/speech_bubble.dart';
+import '../widgets/language_selector.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +28,7 @@ class HomeScreenState extends State<HomeScreen> {
   JobStatus jobStatus = JobStatus.idle;
   JobStatusModel? jobStatusModel;
   String? jobId;
+  LanguageModel _targetLanguage = LanguageModel.availableLanguages.first;
 
   final SummarizationService _summarizationService = SummarizationService();
   final AuthService _authService =
@@ -37,6 +40,12 @@ class HomeScreenState extends State<HomeScreen> {
       summary = null;
       jobStatus = JobStatus.idle;
       jobId = null;
+    });
+  }
+
+  void _handleLanguageSelected(LanguageModel language) {
+    setState(() {
+      _targetLanguage = language;
     });
   }
 
@@ -54,9 +63,8 @@ class HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final locale = Localizations.localeOf(context);
       final JobStatusModel jobStatusResponse = await _summarizationService
-          .summarizeFile(selectedFile!, locale);
+          .summarizeFile(selectedFile!, _targetLanguage.toLocaleString());
       jobId = jobStatusResponse.jobId; // Extract jobId from JobStatusModel
       setState(() {
         jobStatus = JobStatus.processing;
@@ -175,6 +183,7 @@ class HomeScreenState extends State<HomeScreen> {
                   ],
                   SynthiaMascot(width: 80, height: 80),
                   const SizedBox(height: 10),
+
                   // Only show the file selector when not processing
                   if (!isProcessing) ...[
                     FileSelectorButton(onFileSelected: _handleFileSelected),
@@ -184,7 +193,31 @@ class HomeScreenState extends State<HomeScreen> {
                   if (selectedFile != null) ...[
                     FileInfoCard(fileModel: selectedFile!),
                     if (!isProcessing) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 0),
+
+                      // Add the language selector
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: 8.0,
+                              left: 8.0,
+                            ),
+                            child: Text(
+                              localizations.selectTargetLanguage,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          LanguageSelector(
+                            onLanguageSelected: _handleLanguageSelected,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
                       SummarizationButton(
                         isLoading: false,
                         onPressed: _summarizeFile,
