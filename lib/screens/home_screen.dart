@@ -134,6 +134,9 @@ class HomeScreenState extends State<HomeScreen> {
     final bool isProcessing =
         jobStatus == JobStatus.queued || jobStatus == JobStatus.processing;
 
+    final currentLocale = Localizations.localeOf(context);
+    final initialLanguageCode = currentLocale.languageCode;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(localizations.appTitle),
@@ -212,6 +215,7 @@ class HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           LanguageSelector(
+                            initialLanguageCode: initialLanguageCode,
                             onLanguageSelected: _handleLanguageSelected,
                           ),
                         ],

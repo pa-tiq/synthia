@@ -30,7 +30,7 @@ class LanguageModel {
       countries: ['US', 'GB', 'CA', 'AU', 'NZ'],
     ),
     LanguageModel(
-      code: 'pt-BR',
+      code: 'pt',
       name: 'Português',
       countries: ['BR', 'PT', 'AO', 'MZ', 'CV'],
     ),
