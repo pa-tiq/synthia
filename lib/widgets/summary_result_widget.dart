@@ -34,16 +34,16 @@ class SummaryResultWidget extends StatelessWidget {
 
     return Column(
       children: [
-        const Divider(),
-        Text(
-          localizations.summaryTitle,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 16),
+        // const Divider(),
+        // Text(
+        //   localizations.summaryTitle,
+        //   style: const TextStyle(
+        //     fontSize: 20,
+        //     fontWeight: FontWeight.bold,
+        //     color: Colors.black54,
+        //   ),
+        // ),
+        // const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(

@@ -145,52 +145,54 @@ class HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SpeechBubble(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          localizations.mainHeading,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black54,
+                  if (selectedFile == null && summary == null) ...[
+                    SpeechBubble(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            localizations.mainHeading,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black54,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          localizations.subHeading,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black54,
+                          const SizedBox(height: 8),
+                          Text(
+                            localizations.subHeading,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black54,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
+                    const SizedBox(height: 10),
+                  ],
                   SynthiaMascot(width: 80, height: 80),
                   const SizedBox(height: 10),
                   // Only show the file selector when not processing
                   if (!isProcessing) ...[
                     FileSelectorButton(onFileSelected: _handleFileSelected),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                   ],
 
                   if (selectedFile != null) ...[
                     FileInfoCard(fileModel: selectedFile!),
-                    if (jobStatus == JobStatus.idle) const SizedBox(height: 16),
                     if (!isProcessing) ...[
+                      const SizedBox(height: 10),
                       SummarizationButton(
                         isLoading: false,
                         onPressed: _summarizeFile,
                       ),
+                      const SizedBox(height: 10),
                     ],
                     if (isProcessing) ...[
-                      const SizedBox(height: 16),
-
+                      const SizedBox(height: 10),
                       Text(
                         jobStatus == JobStatus.queued
                             ? localizations.queuedMessage
@@ -199,7 +201,7 @@ class HomeScreenState extends State<HomeScreen> {
                       //if (jobId != null) Text('Job ID: $jobId'),
                     ],
                     if (jobStatus == JobStatus.failed) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       Text(localizations.failedMessage),
                       if (jobStatusModel?.error != null)
                         Text('Error: ${jobStatusModel?.error}'),
@@ -207,14 +209,14 @@ class HomeScreenState extends State<HomeScreen> {
                   ],
                   // Only show summary result widget once, and only when completed
                   if (jobStatus == JobStatus.completed && summary != null) ...[
-                    const SizedBox(height: 5),
-
+                    const SizedBox(height: 10),
                     SummaryResultWidget(
                       summary: summary!,
                       localizations: localizations,
                     ),
                   ],
                   if (selectedFile == null && summary == null) ...[
+                    const SizedBox(height: 10),
                     FeatureSection(localizations: localizations),
                   ],
                 ],
